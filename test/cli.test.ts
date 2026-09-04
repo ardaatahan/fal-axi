@@ -318,10 +318,15 @@ describe("official fal queue client integration with mocked HTTP", () => {
             status_url: "status",
             cancel_url: "cancel",
             logs: [],
+            model: "untrusted/model",
           });
         }
         return response(
-          { images: [{ url: "https://fal.media/example.png" }], seed: 7 },
+          {
+            images: [{ url: "https://fal.media/example.png" }],
+            seed: 7,
+            model: "untrusted/model",
+          },
           200,
           { "x-fal-request-id": "request_123" },
         );
@@ -336,6 +341,8 @@ describe("official fal queue client integration with mocked HTTP", () => {
         "request_123",
       ]),
     ).toBe(0);
+    expect(stdout).toContain("model: fal-ai/flux/dev");
+    expect(stdout).not.toContain("untrusted/model");
     stdout = "";
     expect(
       await dispatch(registry, [
@@ -352,7 +359,10 @@ describe("official fal queue client integration with mocked HTTP", () => {
       "https://queue.fal.run/fal-ai/flux/requests/request_123/status?logs=1",
       "https://queue.fal.run/fal-ai/flux/requests/request_123",
     ]);
-    expect(JSON.parse(stdout).result.seed).toBe(7);
+    const resultOutput = JSON.parse(stdout);
+    expect(resultOutput.model).toBe("fal-ai/flux/dev");
+    expect(resultOutput.result.model).toBe("untrusted/model");
+    expect(resultOutput.result.seed).toBe(7);
   });
 
   it("maps fal API failures to exit 2 without leaking credentials", async () => {

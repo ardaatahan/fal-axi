@@ -321,7 +321,7 @@ function jobCommand(
       const api = createApi();
       if (operation === "status") {
         const response = await api.status(model, requestId);
-        output(parsed, { model, ...response });
+        output(parsed, { ...response, model });
       } else {
         const response = await api.result(model, requestId);
         output(parsed, {
