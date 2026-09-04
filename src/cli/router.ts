@@ -63,7 +63,9 @@ export async function dispatch(
   registry: Registry,
   argv: string[],
 ): Promise<number> {
-  const json = argv.includes("--json");
+  const terminator = argv.indexOf("--");
+  const optionTokens = terminator === -1 ? argv : argv.slice(0, terminator);
+  const json = optionTokens.includes("--json");
   try {
     const words: string[] = [];
     for (const token of argv) {
@@ -75,7 +77,7 @@ export async function dispatch(
       const children = Object.keys(registry.commands).filter((key) =>
         key.startsWith(`${words[0]} `),
       );
-      if (children.length && argv.includes("--help")) {
+      if (children.length && optionTokens.includes("--help")) {
         print(
           emitList(
             "commands",

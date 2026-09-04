@@ -91,6 +91,16 @@ describe("AXI shell contract", () => {
     expect(child("unknown").status).toBe(1);
     expect(child("models", "list", "--wat").status).toBe(1);
   });
+
+  it("does not interpret help or JSON tokens after -- as options", async () => {
+    expect(await dispatch(registry, ["image", "--", "--help"])).toBe(1);
+    expect(stdout).toContain("'image' requires a subcommand");
+    expect(stdout).not.toContain("commands[");
+
+    stdout = "";
+    expect(await dispatch(registry, ["image", "--", "--json"])).toBe(1);
+    expect(stdout).toMatch(/^error:/);
+  });
 });
 
 describe("official fal queue client integration with mocked HTTP", () => {
@@ -109,6 +119,9 @@ describe("official fal queue client integration with mocked HTTP", () => {
           response_url: "https://queue.fal.run/result",
           status_url: "https://queue.fal.run/status",
           cancel_url: "https://queue.fal.run/cancel",
+          operation: "untrusted.operation",
+          model: "untrusted/model",
+          next: "untrusted next",
         });
       }),
     );
@@ -141,6 +154,12 @@ describe("official fal queue client integration with mocked HTTP", () => {
       output_format: "png",
     });
     expect(String(observedInit?.body)).not.toContain("test-secret");
+    expect(stdout).toContain("operation: image.generate");
+    expect(stdout).toContain("model: fal-ai/flux/dev");
+    expect(stdout).toContain(
+      "next: fal-axi job status fal-ai/flux/dev image-request",
+    );
+    expect(stdout).not.toContain("untrusted");
     expect(stdout).toContain("request_id: image-request");
   });
 
@@ -167,6 +186,39 @@ describe("official fal queue client integration with mocked HTTP", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rejects empty image and video prompts before confirmation or HTTP", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    for (const kind of ["image", "video"]) {
+      stdout = "";
+      expect(
+        await dispatch(registry, [kind, "generate", " \t "]),
+      ).toBe(1);
+      expect(stdout).toContain(`${kind} prompt must not be empty`);
+      expect(stdout).not.toContain("confirmation required");
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects integers outside JavaScript's safe range before submit", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(
+      await dispatch(registry, [
+        "image",
+        "generate",
+        "test",
+        "--seed",
+        "9007199254740992",
+        "--confirm",
+      ]),
+    ).toBe(1);
+    expect(stdout).toContain("--seed must be a safe integer");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("accepts option-like prompts after the end-of-options terminator", async () => {
     let body: unknown;
     vi.stubGlobal(
@@ -180,6 +232,9 @@ describe("official fal queue client integration with mocked HTTP", () => {
           response_url: "result",
           status_url: "status",
           cancel_url: "cancel",
+          operation: "untrusted.operation",
+          model: "untrusted/model",
+          next: "untrusted next",
         });
       }),
     );
@@ -238,6 +293,14 @@ describe("official fal queue client integration with mocked HTTP", () => {
       fps: 25,
       generate_audio: false,
     });
+    expect(stdout).toContain("operation: video.generate");
+    expect(stdout).toContain(
+      "model: fal-ai/ltx-2.3/text-to-video/fast",
+    );
+    expect(stdout).toContain(
+      "next: fal-axi job status fal-ai/ltx-2.3/text-to-video/fast video-request",
+    );
+    expect(stdout).not.toContain("untrusted");
   });
 
   it("fetches status with logs and fetches a completed result", async () => {

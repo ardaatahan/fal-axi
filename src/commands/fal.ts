@@ -37,6 +37,12 @@ function integerFlag(
     throw new UsageError(`--${name} must be an integer`, `received: ${raw}`);
   }
   const value = Number(raw);
+  if (!Number.isSafeInteger(value)) {
+    throw new UsageError(
+      `--${name} must be a safe integer`,
+      `received: ${raw}`,
+    );
+  }
   if (options.min !== undefined && value < options.min) {
     throw new UsageError(
       `--${name} must be at least ${options.min}`,
@@ -50,6 +56,17 @@ function integerFlag(
     );
   }
   return value;
+}
+
+function requirePrompt(parsed: Parsed, kind: "image" | "video"): string {
+  const prompt = parsed.positionals[0]!;
+  if (!prompt.trim()) {
+    throw new UsageError(
+      `${kind} prompt must not be empty`,
+      "provide a non-empty <prompt>",
+    );
+  }
+  return prompt;
 }
 
 function requireConfirmation(parsed: Parsed, kind: "image" | "video"): void {
@@ -153,11 +170,12 @@ export const imageGenerate: CommandModule = {
     ],
   },
   async run(parsed) {
+    const prompt = requirePrompt(parsed, "image");
     const model = stringFlag(parsed, "model") ?? IMAGE_MODEL;
     const numImages = integerFlag(parsed, "num-images", { min: 1, max: 4 });
     const seed = integerFlag(parsed, "seed");
     requireConfirmation(parsed, "image");
-    const input: Record<string, unknown> = { prompt: parsed.positionals[0]! };
+    const input: Record<string, unknown> = { prompt };
     const imageSize = stringFlag(parsed, "image-size");
     const outputFormat = stringFlag(parsed, "output-format");
     if (imageSize) input.image_size = imageSize;
@@ -166,9 +184,9 @@ export const imageGenerate: CommandModule = {
     if (outputFormat) input.output_format = outputFormat;
     const response = await createApi().submit(model, input);
     output(parsed, {
+      ...response,
       operation: "image.generate",
       model,
-      ...response,
       next: `fal-axi job status ${model} ${String(response.request_id)}`,
     });
     return 0;
@@ -236,6 +254,7 @@ export const videoGenerate: CommandModule = {
     ],
   },
   async run(parsed) {
+    const prompt = requirePrompt(parsed, "video");
     const model = stringFlag(parsed, "model") ?? VIDEO_MODEL;
     const duration = integerFlag(parsed, "duration");
     const fps = integerFlag(parsed, "fps");
@@ -252,7 +271,7 @@ export const videoGenerate: CommandModule = {
       );
     }
     requireConfirmation(parsed, "video");
-    const input: Record<string, unknown> = { prompt: parsed.positionals[0]! };
+    const input: Record<string, unknown> = { prompt };
     if (duration !== undefined) input.duration = duration;
     if (resolution) input.resolution = resolution;
     const aspectRatio = stringFlag(parsed, "aspect-ratio");
@@ -261,9 +280,9 @@ export const videoGenerate: CommandModule = {
     if (booleanFlag(parsed, "no-audio")) input.generate_audio = false;
     const response = await createApi().submit(model, input);
     output(parsed, {
+      ...response,
       operation: "video.generate",
       model,
-      ...response,
       next: `fal-axi job status ${model} ${String(response.request_id)}`,
     });
     return 0;
