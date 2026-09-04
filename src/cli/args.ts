@@ -22,6 +22,10 @@ export function parseArgs(argv: string[], spec: CommandSpec): Parsed {
 
   for (let index = 0; index < argv.length; index++) {
     const token = argv[index]!;
+    if (token === "--") {
+      positionals.push(...argv.slice(index + 1));
+      break;
+    }
     if (token === "--help") {
       help = true;
       continue;

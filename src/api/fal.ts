@@ -25,7 +25,17 @@ export function requireFalKey(): string {
 }
 
 export function validateEndpointId(model: string): void {
-  if (!/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._/-]*$/i.test(model)) {
+  const segments = model.split("/");
+  const invalid =
+    segments.length < 2 ||
+    segments.some(
+      (segment) =>
+        segment === "" ||
+        segment === "." ||
+        segment === ".." ||
+        !/^[a-z0-9][a-z0-9._-]*$/i.test(segment),
+    );
+  if (invalid) {
     throw new UsageError(
       `invalid model endpoint '${model}'`,
       "use an endpoint ID such as fal-ai/flux/dev",

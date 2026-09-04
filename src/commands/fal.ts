@@ -154,7 +154,7 @@ export const imageGenerate: CommandModule = {
   },
   async run(parsed) {
     const model = stringFlag(parsed, "model") ?? IMAGE_MODEL;
-    const numImages = integerFlag(parsed, "num-images", { min: 1 });
+    const numImages = integerFlag(parsed, "num-images", { min: 1, max: 4 });
     const seed = integerFlag(parsed, "seed");
     requireConfirmation(parsed, "image");
     const input: Record<string, unknown> = { prompt: parsed.positionals[0]! };

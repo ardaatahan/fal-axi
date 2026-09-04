@@ -144,6 +144,58 @@ describe("official fal queue client integration with mocked HTTP", () => {
     expect(stdout).toContain("request_id: image-request");
   });
 
+  it("rejects image counts outside the documented 1-4 range before submit", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    for (const count of ["0", "5"]) {
+      stdout = "";
+      expect(
+        await dispatch(registry, [
+          "image",
+          "generate",
+          "test",
+          "--num-images",
+          count,
+          "--confirm",
+        ]),
+      ).toBe(1);
+      expect(stdout).toContain(
+        count === "0" ? "must be at least 1" : "must be at most 4",
+      );
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts option-like prompts after the end-of-options terminator", async () => {
+    let body: unknown;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+        body = JSON.parse(String(init?.body));
+        return response({
+          status: "IN_QUEUE",
+          request_id: "terminated-prompt-request",
+          queue_position: 0,
+          response_url: "result",
+          status_url: "status",
+          cancel_url: "cancel",
+        });
+      }),
+    );
+
+    expect(
+      await dispatch(registry, [
+        "image",
+        "generate",
+        "--confirm",
+        "--",
+        "--weird prompt",
+      ]),
+    ).toBe(0);
+    expect(body).toEqual({ prompt: "--weird prompt" });
+  });
+
   it("submits the documented LTX video shape", async () => {
     let body: unknown;
     vi.stubGlobal(
@@ -254,5 +306,24 @@ describe("official fal queue client integration with mocked HTTP", () => {
     expect(code).toBe(2);
     expect(stdout).toContain("fal API error (401): unauthorized");
     expect(stdout).not.toContain("test-secret");
+  });
+
+  it("rejects traversal and empty model path segments before HTTP", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    for (const model of ["fal-ai/../secret", "fal-ai/flux//dev"]) {
+      stdout = "";
+      expect(
+        await dispatch(registry, [
+          "job",
+          "status",
+          model,
+          "request_123",
+        ]),
+      ).toBe(1);
+      expect(stdout).toContain("invalid model endpoint");
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
