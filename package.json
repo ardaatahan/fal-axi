@@ -1,0 +1,49 @@
+{
+  "name": "fal-axi",
+  "version": "0.1.0",
+  "description": "AXI-compliant CLI for safe, agent-ergonomic fal.ai generation and queue access.",
+  "type": "module",
+  "bin": {
+    "fal-axi": "bin/fal-axi.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "skills",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node --eval \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "skill:gen": "node scripts/gen-skill.mjs",
+    "skill:check": "node scripts/gen-skill.mjs --check"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ardaatahan/fal-axi.git"
+  },
+  "keywords": [
+    "axi",
+    "fal-ai",
+    "cli",
+    "agents"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ardaatahan/fal-axi/issues"
+  },
+  "homepage": "https://github.com/ardaatahan/fal-axi#readme",
+  "dependencies": {
+    "@fal-ai/client": "^1.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}
