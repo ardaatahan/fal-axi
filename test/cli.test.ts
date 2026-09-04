@@ -233,8 +233,9 @@ describe("official fal queue client integration with mocked HTTP", () => {
     ).toBe(0);
 
     expect(calls).toEqual([
-      "https://queue.fal.run/fal-ai/flux/dev/requests/request_123/status?logs=1",
-      "https://queue.fal.run/fal-ai/flux/dev/requests/request_123",
+      // @fal-ai/client resolves nested endpoint paths to their queue app.
+      "https://queue.fal.run/fal-ai/flux/requests/request_123/status?logs=1",
+      "https://queue.fal.run/fal-ai/flux/requests/request_123",
     ]);
     expect(JSON.parse(stdout).result.seed).toBe(7);
   });
